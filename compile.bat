@@ -1,0 +1,1 @@
+g++ -Wall -o main ./src/*.cpp -I./include -std=c++26
