@@ -1,1 +1,1 @@
-g++ -Wall -o main ./src/*.cpp -I./include -std=c++26
+g++ -Wall -Wpadded -o main ./src/*.cpp -I./include -std=c++26 -O3
