@@ -2,11 +2,14 @@
 #define CIGVIEW_HPP
 
 #include <fstream>
-#include <vector>
+#include <deque>
 
 // Pixel display
 
-static std::string truecolorToANSI(uint8_t r, uint8_t g, uint8_t b) {
+extern const std::string utf_char = "█";
+extern const std::string color_esc = "\x1b[0m";
+
+inline std::string truecolorToANSI(uint8_t r, uint8_t g, uint8_t b) {
     std::string ansi = "\x1b[38;2;";
 
     ansi += std::to_string(r); ansi += ';';
@@ -16,22 +19,8 @@ static std::string truecolorToANSI(uint8_t r, uint8_t g, uint8_t b) {
     return ansi;
 }
 
-class Pixel final {
-    public:
-        Pixel(uint8_t r, uint8_t g, uint8_t b) {
-            this->color_code = truecolorToANSI(r, g, b);
-        }
-        
-        void echoPixel(void);
-
-    protected:
-        const std::string utf_char = "█";
-        const std::string color_esc = "\x1b[0m";
-        std::string color_code;
-};
-
-void Pixel::echoPixel(void) {
-    std::cout << this->color_code + this->utf_char + this->color_esc;
+void echoPixel(std::string color_code) {
+    std::cout << color_code + utf_char + color_esc;
 }
 
 
@@ -47,10 +36,11 @@ class Bitmap {
         }
 
         void readData(void);
+        void displayBitmap(void);
 
     private:
         std::ifstream file;
-        std::vector<std::array<uint8_t, 4>> data;
+        std::deque<std::array<uint8_t, 4>> data;
         uint32_t size;
         uint16_t width;
         uint16_t height;
@@ -58,27 +48,38 @@ class Bitmap {
 
 void Bitmap::readData(void) {
     if (this->file) {
-        std::byte format[2];
-        std::byte offset{};
+        uint8_t format[2];
+        uint8_t offset;
 
         this->file.read(reinterpret_cast<char*>(format), sizeof(format));
         this->file.read(reinterpret_cast<char*>(&offset), sizeof(offset));
 
-        std::cout << (int)offset << std::endl;
-        this->file.seekg((uint8_t)offset, std::ios::beg);
+        this->file.seekg(18, std::ios::beg);
+        this->file.read(reinterpret_cast<char*>(&this->width), sizeof(width));
+        this->file.read(reinterpret_cast<char*>(&this->height), sizeof(height));
 
-        do {
+        this->file.seekg(offset + 1, std::ios::beg);
+
+        while (!file.eof()) {
             std::array<uint8_t, 4> pixel; 
 
             this->file.read(reinterpret_cast<char*>(pixel.data()), pixel.size());
-            this->data.push_back(pixel);
-
-        } while (!file.eof());
-
-        for (std::array<uint8_t, 4> u : data) {
-            std::printf("%x%x%x\n", u[0], u[1], u[2]);
+            this->data.push_front(pixel);
         }
+
         std::cout << data.size();
+    }
+}
+
+void Bitmap::displayBitmap(void) {
+
+    for (std::array<uint8_t, 4> p : data) {
+        echoPixel(truecolorToANSI(p.at(2), p.at(1), p.at(0)));
+        std::cout << std::to_string(p.at(0));
+        std::cout << std::to_string(p.at(1));
+        std::cout << std::to_string(p.at(2));
+        std::cout << std::to_string(p.at(3)) << std::endl;
+        //std::cout << truecolorToANSI(p.at(0), p.at(1), p.at(2)) << std::endl;
     }
 }
 

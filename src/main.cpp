@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 
     Bitmap bmp("./kk2.bmp");
     bmp.readData();
-    bmp.~Bitmap();
+    bmp.displayBitmap();
 
     return 0;
 }
