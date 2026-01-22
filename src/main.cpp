@@ -19,7 +19,7 @@ using namespace std;
 int main(int argc, char *argv[]) {
     setup();
 
-    Bitmap bmp("./kk2.bmp");
+    BMP bmp("./shitass.bmp");
     bmp.readData();
     bmp.displayBitmap();
 

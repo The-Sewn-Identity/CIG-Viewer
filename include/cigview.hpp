@@ -4,7 +4,8 @@
 #include <fstream>
 #include <deque>
 
-// Pixel display
+#define BMP_OFFSET 0x0A
+#define BMP_DIMENSIONS 0x12
 
 extern const std::string utf_char = "█";
 extern const std::string color_esc = "\x1b[0m";
@@ -23,15 +24,12 @@ void echoPixel(std::string color_code) {
     std::cout << color_code + utf_char + color_esc;
 }
 
-
-// BMP file reading (must be 24-bit!)
-
-class Bitmap {
+typedef class BMP {
     public:
-        Bitmap(std::string path) {
+        BMP(std::string path) {
             this->file.open(path, std::ios::binary);
         }
-        ~Bitmap() {
+        ~BMP() {
             this->file.close();
         }
 
@@ -42,21 +40,25 @@ class Bitmap {
         std::ifstream file;
         std::deque<std::array<uint8_t, 4>> data;
         uint32_t size;
-        uint16_t width;
-        uint16_t height;
-};
+        uint32_t width;
+        uint32_t height;
+        
+} BMP;
 
-void Bitmap::readData(void) {
+void BMP::readData(void) {
     if (this->file) {
-        uint8_t format[2];
-        uint8_t offset;
+        uint16_t format;
+        uint32_t offset;
 
-        this->file.read(reinterpret_cast<char*>(format), sizeof(format));
+        this->file.read(reinterpret_cast<char*>(&format), sizeof(format));
+        this->file.read(reinterpret_cast<char*>(&this->size), sizeof(this->size));
+
+        this->file.seekg(BMP_OFFSET, std::ios::beg);
         this->file.read(reinterpret_cast<char*>(&offset), sizeof(offset));
 
-        this->file.seekg(18, std::ios::beg);
-        this->file.read(reinterpret_cast<char*>(&this->width), sizeof(width));
-        this->file.read(reinterpret_cast<char*>(&this->height), sizeof(height));
+        this->file.seekg(BMP_DIMENSIONS, std::ios::beg);
+        this->file.read(reinterpret_cast<char*>(&this->width), sizeof(this->width));
+        this->file.read(reinterpret_cast<char*>(&this->height), sizeof(this->height));
 
         this->file.seekg(offset + 1, std::ios::beg);
 
@@ -64,46 +66,28 @@ void Bitmap::readData(void) {
             std::array<uint8_t, 4> pixel; 
 
             this->file.read(reinterpret_cast<char*>(pixel.data()), pixel.size());
-            this->data.push_front(pixel);
-        }
 
-        std::cout << data.size();
+            this->data.push_back(pixel);
+        }
     }
 }
 
-void Bitmap::displayBitmap(void) {
+void BMP::displayBitmap(void) {
+    for (unsigned int y = this->height - 1; y > 0; y--)
+    {
+        for (unsigned int x = 0; x < this->width; x++)
+        {
+            std::array<uint8_t, 4> p = this->data.at(y * this->width + x);
+            float a = static_cast<float>(p.at(2)) / 0xFF;
 
-    for (std::array<uint8_t, 4> p : data) {
-        echoPixel(truecolorToANSI(p.at(2), p.at(1), p.at(0)));
-        std::cout << std::to_string(p.at(0));
-        std::cout << std::to_string(p.at(1));
-        std::cout << std::to_string(p.at(2));
-        std::cout << std::to_string(p.at(3)) << std::endl;
-        //std::cout << truecolorToANSI(p.at(0), p.at(1), p.at(2)) << std::endl;
-    }
-}
+            uint8_t r = p.at(1) * a;
+            uint8_t g = p.at(0) * a;
+            uint8_t b = p.at(3) * a;
 
-
-class CIGImage {
-    public:
-        CIGImage(std::string path) {
-            this->file.open(path);
+            echoPixel(truecolorToANSI(r, g, b));
         }
-        ~CIGImage() {
-            this->file.close();
-        }
-
-        void readData(void);
-
-    private:
-        std::ifstream file;
-        int width;
-        int height;
-};
-
-void CIGImage::readData(void) {
-    if (this->file) {
         
+        std::cout << std::endl;
     }
 }
 
